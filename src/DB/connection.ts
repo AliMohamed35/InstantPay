@@ -8,11 +8,11 @@ const sequelize = new Sequelize("fintech", "root", "", {
 
 export async function connectDB() {
   try {
-    await sequelize.authenticate().then(()=>{
-      logger.info("Database connected successfully");
-    });
-  } catch (error) {
-    logger.error("Data base failed to connect!");
+    await sequelize.authenticate();
+    logger.info("Database connected successfully");
+  } catch (error: any) {
+    logger.error(`Database failed to connect: ${error.stack ?? error.message ?? error}`);
+    throw error;
   }
 }
 

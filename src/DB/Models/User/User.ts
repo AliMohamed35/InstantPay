@@ -17,6 +17,15 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
 
   declare passwordHash: string;
   declare pinHash: string;
+  declare isActive: number;
+
+  declare accessToken: string | null;
+  declare refreshToken: string | null;
+
+  declare OTP: number | null;
+  declare isVerified: number | null;
+
+  declare isDeleted: number | null;
 
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -61,6 +70,20 @@ User.init(
       allowNull: false,
       field: "pin_hash",
     },
+    isActive: { type: DataTypes.INTEGER, defaultValue: 0 },
+    accessToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: "access_token",
+    },
+    refreshToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: "refresh_token",
+    },
+    OTP: { type: DataTypes.INTEGER, allowNull: true, field: "OTP" },
+    isVerified: { type: DataTypes.INTEGER, defaultValue: 0, field: "isVerified" },
+    isDeleted: { type: DataTypes.INTEGER, defaultValue: 0, field: "isDeleted" },
     createdAt: {
       type: DataTypes.DATE,
       field: "created_at",
@@ -74,9 +97,9 @@ User.init(
     sequelize,
     tableName: "users",
     timestamps: true,
-    createdAt: "createdAt", 
-    updatedAt: "updatedAt", 
-  }
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+  },
 );
 
 export default User;

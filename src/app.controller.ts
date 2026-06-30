@@ -8,12 +8,12 @@ async function bootstrap(app: Application, express: any): Promise<void> {
 
   await connectDB();
 
-  await sequelize.sync({alter: true});
+  await sequelize.sync();
 
   app.get("/health", (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({ message: "healthy", timestamp: Date.now() });
   });
-
+  
   // routes
   app.use("/auth", authRouter);
 }

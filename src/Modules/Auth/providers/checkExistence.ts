@@ -1,3 +1,4 @@
+import { UserAlreadyExistException, UserNotFoundException } from "../../../Exceptions/CustomExceptions/Exceptions.ts";
 import { authRepository } from "../AuthRepository.ts";
 
 export async function checkExistence(email: string) {
