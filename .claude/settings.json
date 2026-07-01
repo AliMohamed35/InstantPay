@@ -10,7 +10,16 @@
       "Bash(node ./_t.mjs)",
       "Bash(rm -f ./_t.mjs)",
       "PowerShell(Get-Process -Id 28608)",
-      "Bash(node ./dbg.ts)"
+      "Bash(node ./dbg.ts)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git reset *)",
+      "Bash(git commit -q -m 'Add .gitignore and stop tracking node_modules *)",
+      "Bash(git push *)",
+      "Read(//c/Users/AliMohamed/AppData/Roaming/Code/User/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\AliMohamed\\AppData\\Roaming\\Code\\User"
     ]
   }
 }
