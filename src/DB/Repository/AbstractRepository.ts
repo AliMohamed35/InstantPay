@@ -1,4 +1,4 @@
-import type { Attributes, CreationAttributes, FindOptions, Model, ModelStatic, UpdateOptions } from "sequelize";
+import type { Attributes, CreationAttributes, DestroyOptions, FindOptions, Model, ModelStatic, UpdateOptions } from "sequelize";
 
 class AbstractRepository<M extends Model> {
   protected readonly model: ModelStatic<M>;
@@ -18,6 +18,11 @@ class AbstractRepository<M extends Model> {
   // this returns Promise<[affectedCount: number]> not a model instance
   public update(values: Partial<Attributes<M>>, options: UpdateOptions<Attributes<M>>): Promise<[affectedCount: number]>{
     return this.model.update(values, options);
+  }
+
+  // delete
+  public delete(options: DestroyOptions): Promise<number>{
+    return this.model.destroy(options);
   }
 }
 

@@ -83,6 +83,94 @@ class AuthController {
       return res.status(500).json({ message: error.message, success: false });
     }
   }
+
+  public async resendOTP(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      await authService.resendOTP(email);
+
+      res.status(201).json({ message: "new OTP sent!", success: true });
+    } catch (error: any) {
+      const statusCode = error.statusCode ?? 500;
+      logger.error("this is an authController error: " + `${error}`);
+      res
+        .status(statusCode)
+        .json({
+          message: "internal server error",
+          success: false,
+          error: error.message,
+        });
+    }
+  }
+
+  public async softDeleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      await authService.softDeleteUser(email);
+
+      res.status(201).json({ message: "user soft deleted!", success: true });
+    } catch (error: any) {
+      const statusCode = error.statusCode ?? 500;
+      logger.error("this is an authController error: " + `${error}`);
+      res
+        .status(statusCode)
+        .json({
+          message: "internal server error",
+          success: false,
+          error: error.message,
+        });
+    }
+  }
+
+  public async deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      await authService.deleteUser(email);
+
+      res
+        .status(201)
+        .json({ message: "user deleted! successfully", success: true });
+    } catch (error: any) {
+      const statusCode = error.statusCode ?? 500;
+      logger.error("this is an authController error: " + `${error}`);
+      res
+        .status(statusCode)
+        .json({
+          message: "internal server error",
+          success: false,
+          error: error.message,
+        });
+    }
+  }
+
+  public async changePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, oldPassword, newPassword } = req.body;
+      const updatedUser = await authService.changePassword(
+        email,
+        oldPassword,
+        newPassword,
+      );
+
+      return res
+        .status(200)
+        .json({
+          message: "user password changed successfully",
+          success: true,
+          data: updatedUser,
+        });
+    } catch (error: any) {
+      const statusCode = error.statusCode ?? 500;
+      logger.error("this is an authController error: " + `${error}`);
+      res
+        .status(statusCode)
+        .json({
+          message: "internal server error",
+          success: false,
+          error: error.message,
+        });
+    }
+  }
 }
 
 export const authController = new AuthController();

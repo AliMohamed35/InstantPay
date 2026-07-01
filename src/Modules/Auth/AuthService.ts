@@ -50,7 +50,7 @@ class AuthService {
     // check existence
     const userExist = await checkExistence(loginData.email);
 
-    if(!userExist?.isVerified){
+    if (!userExist?.isVerified) {
       throw new BadRequestException("User not verified!");
     }
 
@@ -61,16 +61,21 @@ class AuthService {
         userExist.passwordHash,
       );
 
-      const accessToken = generateAccessToken(userId);
-      const refreshToken = generateRefreshToken(userId);
+      if(!matchedPassword){
+        throw new BadRequestException("Invalid login credentials!")
+      }
 
       if (userExist.isActive) {
         throw new UserAlreadyActiveException("Already logged in!");
       }
 
+      const accessToken = generateAccessToken(userId);
+      const refreshToken = generateRefreshToken(userId);
+
+
       if (matchedPassword) {
         await authRepository.update(
-          { isActive: 1, accessToken, refreshToken },
+          { isActive: 1, accessToken, refreshToken, isDeleted: 0 },
           { where: { email: userExist.email } },
         );
       }
@@ -105,15 +110,106 @@ class AuthService {
     }
 
     if (userExist.OTP == otp) {
-      await authRepository.update({ isVerified: 1, OTP: null }, { where: { email } });
+      await authRepository.update(
+        { isVerified: 1, OTP: null },
+        { where: { email } },
+      );
     }
 
     return userExist;
   }
 
   // ResendOTP
+  public async resendOTP(email: string) {
+    const userExist = await checkExistence(email);
+
+    if (!userExist) {
+      throw new UserNotFoundException("User not found!");
+    }
+
+    if (userExist.isVerified) {
+      throw new BadRequestException("User already verified!");
+    }
+
+    const { otp } = generateOTP();
+
+    return await authRepository.update({ OTP: otp }, { where: { email } });
+  }
+
   // Reset / forget password
+  // check email existence
+  // send email or sms to user phoneNumber
+  // then update the password in database with the new one
+
   // Change password
+  public async changePassword(
+    email: string,
+    oldPassword: string,
+    newPassword: string,
+  ) {
+    const userExist = await checkExistence(email);
+
+    if (!userExist) {
+      throw new UserNotFoundException("user doesn't exist!");
+    }
+
+    // Enter your pin too change password
+
+    // Compare new to old
+    const match = await comparePassword(oldPassword, userExist.passwordHash);
+
+    if (!match) {
+      throw new BadRequestException("Password doesn't match!");
+    }
+
+    const newPass = await hashPassword(newPassword);
+
+    const updatedUser = await authRepository.update(
+      { passwordHash: newPass, isActive: 0 },
+      { where: { email } },
+    );
+
+    return updatedUser;
+  }
+
+  // Soft delete user
+  public async softDeleteUser(email: string) {
+    const userExist = await checkExistence(email);
+
+    if (!userExist) {
+      throw new UserNotFoundException("user doesn't exist!");
+    }
+
+    if (userExist.isDeleted) {
+      throw new UserNotFoundException(
+        "user already soft deleted, log in to retrieve the account!",
+      );
+    }
+
+    return await authRepository.update(
+      { isActive: 0, isDeleted: 1 },
+      { where: { email } },
+    );
+  }
+  // Delete user
+  public async deleteUser(email: string) {
+    const userExist = await checkExistence(email);
+
+    if (!userExist) {
+      throw new UserNotFoundException("user doesn't exist!");
+    }
+
+    if (userExist.isDeleted) {
+      throw new UserNotFoundException(
+        "user already soft deleted, log in to retrieve the account!",
+      );
+    }
+
+    return await authRepository.delete({ where: { email } });
+  }
+
+  // Fully update user
+  // Partial update user
 }
 
 export const authService = new AuthService();
