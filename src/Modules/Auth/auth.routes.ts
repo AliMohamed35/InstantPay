@@ -1,16 +1,19 @@
 import { Router } from "express";
 import { authController } from "./AuthController.ts";
 import { userSchema, validate } from "../../middlewares/joi.ts";
+import { auth } from "../../middlewares/authenticate.ts";
 
 const authRouter = Router();
 
-authRouter.post("/register", validate(userSchema),authController.register);
+authRouter.post("/register", validate(userSchema), authController.register);
 authRouter.post("/login", authController.login);
-authRouter.post("/logout", authController.logout);
 authRouter.post("/verify", authController.verifyOTP);
 authRouter.post("/otp", authController.resendOTP);
-authRouter.post("/delete", authController.softDeleteUser);
-authRouter.delete("/delete", authController.deleteUser);
-authRouter.post("/reset-password", authController.changePassword);
+
+// Protected
+authRouter.post("/logout", auth, authController.logout);
+authRouter.post("/reset-password", auth, authController.changePassword);
+authRouter.post("/delete", auth, authController.softDeleteUser);
+authRouter.delete("/delete", auth, authController.deleteUser);
 
 export default authRouter;
