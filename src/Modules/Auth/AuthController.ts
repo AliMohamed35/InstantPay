@@ -28,14 +28,26 @@ class AuthController {
 
   public async login(req: Request, res: Response, next: NextFunction) {
     try {
-      // get data from body
-      const loginData = req.body;
-      const loggedUser = await authService.login(loginData);
+      const { accessToken, refreshToken, userId } = await authService.login(
+        req.body,
+      );
 
-      res.status(200).json({
-        message: "User logged in successfully",
+      res
+        .cookie("accessToken", accessToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          maxAge: 15 * 60 * 1000,
+        })
+        .cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          sameSite: "strict",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+      return res.status(200).json({
         success: true,
-        data: loggedUser,
+        message: "User logged in successfully",
+        data: { userId },
       });
     } catch (error: any) {
       logger.error(
@@ -93,13 +105,11 @@ class AuthController {
     } catch (error: any) {
       const statusCode = error.statusCode ?? 500;
       logger.error("this is an authController error: " + `${error}`);
-      res
-        .status(statusCode)
-        .json({
-          message: "internal server error",
-          success: false,
-          error: error.message,
-        });
+      res.status(statusCode).json({
+        message: "internal server error",
+        success: false,
+        error: error.message,
+      });
     }
   }
 
@@ -112,34 +122,31 @@ class AuthController {
     } catch (error: any) {
       const statusCode = error.statusCode ?? 500;
       logger.error("this is an authController error: " + `${error}`);
-      res
-        .status(statusCode)
-        .json({
-          message: "internal server error",
-          success: false,
-          error: error.message,
-        });
+      res.status(statusCode).json({
+        message: "internal server error",
+        success: false,
+        error: error.message,
+      });
     }
   }
 
   public async deleteUser(req: Request, res: Response, next: NextFunction) {
     try {
-      const { email } = req.body;
-      await authService.deleteUser(email);
+      const userId = req.user!.userId;
+      await authService.deleteUser(userId);
+      res.clearCookie("accessToken").clearCookie("refreshToken");
 
-      res
+      return res
         .status(201)
         .json({ message: "user deleted! successfully", success: true });
     } catch (error: any) {
       const statusCode = error.statusCode ?? 500;
       logger.error("this is an authController error: " + `${error}`);
-      res
-        .status(statusCode)
-        .json({
-          message: "internal server error",
-          success: false,
-          error: error.message,
-        });
+      res.status(statusCode).json({
+        message: "internal server error",
+        success: false,
+        error: error.message,
+      });
     }
   }
 
@@ -152,23 +159,21 @@ class AuthController {
         newPassword,
       );
 
-      return res
-        .status(200)
-        .json({
-          message: "user password changed successfully",
-          success: true,
-          data: updatedUser,
-        });
+      return res.status(200).json({
+        message: "user password changed successfully",
+        success: true,
+        data: updatedUser,
+      });
     } catch (error: any) {
       const statusCode = error.statusCode ?? 500;
-      logger.error("this is an authController error: " + `${error}`);
-      res
-        .status(statusCode)
-        .json({
-          message: "internal server error",
-          success: false,
-          error: error.message,
-        });
+      logger.error(
+        `Auth controller change password error: ${error.stack ?? error.message ?? error}`,
+      );
+      res.status(statusCode).json({
+        message: "internal server error",
+        success: false,
+        error: error.message,
+      });
     }
   }
 }

@@ -2,9 +2,12 @@ import type { Application, NextFunction, Request, Response } from "express";
 import authRouter from "./Modules/Auth/auth.routes.ts";
 import sequelize, { connectDB } from "./DB/connection.ts";
 import "./DB/Models/index.ts";
+import cookieParser from 'cookie-parser'; 
 
 async function bootstrap(app: Application, express: any): Promise<void> {
   app.use(express.json());
+
+  app.use(cookieParser());
 
   await connectDB();
 

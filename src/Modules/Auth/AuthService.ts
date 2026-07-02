@@ -54,34 +54,26 @@ class AuthService {
       throw new BadRequestException("User not verified!");
     }
 
-    if (userExist) {
-      const userId = userExist.userId;
-      const matchedPassword = await comparePassword(
-        loginData.password,
-        userExist.passwordHash,
-      );
-
-      if(!matchedPassword){
-        throw new BadRequestException("Invalid login credentials!")
-      }
-
-      if (userExist.isActive) {
-        throw new UserAlreadyActiveException("Already logged in!");
-      }
-
-      const accessToken = generateAccessToken(userId);
-      const refreshToken = generateRefreshToken(userId);
-
-
-      if (matchedPassword) {
-        await authRepository.update(
-          { isActive: 1, accessToken, refreshToken, isDeleted: 0 },
-          { where: { email: userExist.email } },
-        );
-      }
-    } else {
-      throw new UserNotFoundException("User doesn't exist!");
+    const matchedPassword = await comparePassword(
+      loginData.password,
+      userExist.passwordHash,
+    );
+    if (!matchedPassword) {
+      throw new BadRequestException("Invalid login credentials!");
     }
+
+    if (userExist.isActive) {
+      throw new UserAlreadyActiveException("Already logged in!");
+    }
+    const accessToken = generateAccessToken(userExist.userId);
+    const refreshToken = generateRefreshToken(userExist.userId);
+
+    await authRepository.update(
+      { isActive: 1, accessToken, refreshToken, isDeleted: 0 },
+      { where: { email: userExist.email } },
+    );
+
+    return { userId: userExist.userId, accessToken, refreshToken };
   }
 
   //logout
