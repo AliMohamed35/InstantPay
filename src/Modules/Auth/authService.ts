@@ -184,12 +184,7 @@ class AuthService {
       ? await compareRefresh(refreshToken, user.refreshToken)
       : false;
 
-    if (
-      !user ||
-      !user.refreshToken ||
-      user.refreshToken !== refreshToken ||
-      !matches
-    ) {
+    if (!user || !user.refreshToken || !matches) {
       if (user) {
         await authRepository.update(
           { refreshToken: null },
