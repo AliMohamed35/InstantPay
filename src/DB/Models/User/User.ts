@@ -22,6 +22,7 @@ class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare refreshToken: string | null;
 
   declare OTP: number | null;
+  declare otpExpire: number | null;
   declare isVerified: number | null;
 
   declare isDeleted: number | null;
@@ -70,14 +71,23 @@ User.init(
       field: "pin_hash",
     },
     isActive: { type: DataTypes.INTEGER, defaultValue: 0 },
-  
+
     refreshToken: {
       type: DataTypes.TEXT,
       allowNull: true,
       field: "refresh_token",
     },
     OTP: { type: DataTypes.INTEGER, allowNull: true, field: "OTP" },
-    isVerified: { type: DataTypes.INTEGER, defaultValue: 0, field: "isVerified" },
+    otpExpire: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "otpExpire",
+    },
+    isVerified: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      field: "isVerified",
+    },
     isDeleted: { type: DataTypes.INTEGER, defaultValue: 0, field: "isDeleted" },
     createdAt: {
       type: DataTypes.DATE,
