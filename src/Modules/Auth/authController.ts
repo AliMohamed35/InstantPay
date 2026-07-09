@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../../utilities/logger/winston.ts";
 import type { RegisterDTO, RegisterResponseDTO } from "./dto/RegisterDTO.ts";
-import { authService } from "./AuthService.ts";
+import { authService } from "./authService.ts";
 
 class AuthController {
   public async register(req: Request, res: Response, next: NextFunction) {

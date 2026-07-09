@@ -1,4 +1,3 @@
-import type { Identifier } from "sequelize";
 import {
   BadRequestException,
   UserAlreadyActiveException,
@@ -7,7 +6,9 @@ import {
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
 import {
   comparePassword,
+  compareRefresh,
   hashPassword,
+  hashRefresh,
 } from "../../utilities/bcrypt/bcrypt.ts";
 import {
   generateAccessToken,
@@ -16,7 +17,7 @@ import {
   type TokenPayload,
 } from "../../utilities/jwt/jwt.ts";
 import { generateOTP } from "../../utilities/OTP/generateOTP.ts";
-import { authRepository } from "./AuthRepository.ts";
+import { authRepository } from "./authRepository.ts";
 import type { LoginDTO } from "./dto/LoginDTO.ts";
 import type { RegisterDTO, RegisterResponseDTO } from "./dto/RegisterDTO.ts";
 import { checkExistence } from "./providers/checkExistence.ts";
@@ -31,7 +32,7 @@ class AuthService {
     if (!userExist) {
       const hashedPassword = await hashPassword(userData.password);
       const hashedPin = await hashPassword(userData.pin);
-      const { otp } = generateOTP();
+      const { otp, otpExpire } = generateOTP();
 
       await authRepository.create({
         firstName: userData.firstName,
@@ -42,6 +43,7 @@ class AuthService {
         isActive: 0,
         isVerified: 0,
         OTP: otp,
+        otpExpire,
         pinHash: hashedPin,
       });
 
@@ -61,6 +63,10 @@ class AuthService {
     // check existence
     const userExist = await checkExistence(loginData.email);
 
+    if (!userExist) {
+      throw new BadRequestException("user doesn't exist!");
+    }
+
     if (!userExist?.isVerified) {
       throw new BadRequestException("User not verified!");
     }
@@ -69,6 +75,7 @@ class AuthService {
       loginData.password,
       userExist.passwordHash,
     );
+
     if (!matchedPassword) {
       throw new BadRequestException("Invalid login credentials!");
     }
@@ -76,11 +83,14 @@ class AuthService {
     if (userExist.isActive) {
       throw new UserAlreadyActiveException("Already logged in!");
     }
+
     const accessToken = generateAccessToken(userExist.userId);
     const refreshToken = generateRefreshToken(userExist.userId);
 
+    const hashedRefresh = await hashRefresh(refreshToken);
+
     await authRepository.update(
-      { isActive: 1, refreshToken, isDeleted: 0 },
+      { isActive: 1, refreshToken: hashedRefresh, isDeleted: 0 },
       { where: { email: userExist.email } },
     );
 
@@ -116,12 +126,16 @@ class AuthService {
       throw new UserNotFoundException("User not found!");
     }
 
+    if (userExist?.otpExpire! < Date.now()) {
+      throw new BadRequestException("OTP expired, resend a new one!");
+    }
+
     if (userExist.OTP !== otp) {
       throw new BadRequestException("OTP doesn't match!");
     }
 
     await authRepository.update(
-      { isVerified: 1, OTP: null },
+      { isVerified: 1, OTP: null, otpExpire: null },
       { where: { email } },
     );
 
@@ -140,9 +154,12 @@ class AuthService {
       throw new BadRequestException("User already verified!");
     }
 
-    const { otp } = generateOTP();
+    const { otp, otpExpire } = generateOTP();
 
-    return await authRepository.update({ OTP: otp }, { where: { email } });
+    return await authRepository.update(
+      { OTP: otp, otpExpire },
+      { where: { email } },
+    );
   }
 
   // Reset / forget password
@@ -163,7 +180,16 @@ class AuthService {
 
     const user = await authRepository.findById(payload.userId);
 
-    if (!user || !user.refreshToken || user.refreshToken !== refreshToken) {
+    const matches = user?.refreshToken
+      ? await compareRefresh(refreshToken, user.refreshToken)
+      : false;
+
+    if (
+      !user ||
+      !user.refreshToken ||
+      user.refreshToken !== refreshToken ||
+      !matches
+    ) {
       if (user) {
         await authRepository.update(
           { refreshToken: null },
@@ -177,7 +203,7 @@ class AuthService {
     const newRefreshToken = generateRefreshToken(user.userId);
 
     await authRepository.update(
-      { refreshToken: newRefreshToken },
+      { refreshToken: await hashRefresh(newRefreshToken) },
       { where: { userId: user.userId } },
     );
 

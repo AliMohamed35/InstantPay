@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authController } from "./AuthController.ts";
+import { authController } from "./authController.ts";
 import * as joiContent from "../../middlewares/joi.ts";
 import { auth } from "../../middlewares/authenticate.ts";
 
