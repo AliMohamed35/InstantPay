@@ -27,4 +27,19 @@ userRouter.delete(
   userController.deleteUser,
 );
 
+userRouter.get("/:userId", auth, userController.getSpecificUser);
+userRouter.put(
+  "/:userId",
+  auth,
+  validate(joiContent.updateUserSchema),
+  userController.updateUser,
+);
+
+userRouter.patch(
+  "/:userId",
+  auth,
+  validate(joiContent.partialUpdateSchema),
+  userController.partialUpdateUser,
+);
+
 export default userRouter;
