@@ -7,6 +7,9 @@ import {
   hashPassword,
 } from "../../utilities/bcrypt/bcrypt.ts";
 import { authRepository } from "../Auth/authRepository.ts";
+import { toPublicUser } from "../Auth/providers/toPublicUser.ts";
+import type { PartialUpdateDTO, UpdateUserDTO } from "./dto/updateDTO.ts";
+import { userRepository } from "./userRepository.ts";
 
 class UserService {
   // Change password
@@ -66,8 +69,52 @@ class UserService {
     return await authRepository.delete({ where: { email: userExist.email } });
   }
 
+  // getSpecificUser
+  public async getSpecificUser(userId: any) {
+    const userExist = await authRepository.findById(userId);
+
+    if (!userExist) {
+      throw new UserNotFoundException("User not found!");
+    }
+
+    return toPublicUser(userExist);
+  }
+
   // Fully update user
+  public async fullyUpdateUser(userId: any, userData: UpdateUserDTO) {
+    // check user existence
+    const userExist = await authRepository.findById(userId);
+    if (!userExist) throw new UserNotFoundException("User Not Found!");
+
+    const [affectedCount] = await userRepository.update(userData, {
+      where: { userId },
+    });
+
+    if (affectedCount == 0) {
+      throw new BadRequestException("No changes made");
+    }
+
+    return { message: "user updated successfully" };
+  }
+
   // Partial update user
+  public async partialUpdateUser(userId: any, userField: PartialUpdateDTO) {
+    const userExist = await authRepository.findById(userId);
+
+    if (!userExist) {
+      throw new UserNotFoundException("user not found!");
+    }
+
+    const [affectedCount] = await userRepository.update(userField, {
+      where: { userId },
+    });
+
+    if (affectedCount == 0) {
+      throw new BadRequestException("No changes made");
+    }
+
+    return { message: "user updated successfully" };
+  }
 }
 
 export const userService = new UserService();
