@@ -3,7 +3,7 @@ import authRouter from "./Modules/Auth/auth.routes.ts";
 import userRouter from "./Modules/User/user.routes.ts";
 import sequelize, { connectDB } from "./DB/connection.ts";
 import "./DB/Models/index.ts";
-import cookieParser from 'cookie-parser'; 
+import cookieParser from "cookie-parser";
 
 async function bootstrap(app: Application, express: any): Promise<void> {
   app.use(express.json());
@@ -17,7 +17,7 @@ async function bootstrap(app: Application, express: any): Promise<void> {
   app.get("/health", (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({ message: "healthy", timestamp: Date.now() });
   });
-  
+
   // routes
   app.use("/auth", authRouter);
   app.use("/user", userRouter);

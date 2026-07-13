@@ -1,19 +1,13 @@
 import {
   BadRequestException,
-  UserAlreadyActiveException,
   UserAlreadyExistException,
   UserNotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
-import {
-  comparePassword,
-  compareRefresh,
-  hashPassword,
-  hashRefresh,
-} from "../../utilities/bcrypt/bcrypt.ts";
+import * as bcryptContent from "../../utilities/bcrypt/bcrypt.ts";
 import {
   generateAccessToken,
   generateRefreshToken,
-  verifyToken,
+  verifyRefreshToken,
   type TokenPayload,
 } from "../../utilities/jwt/jwt.ts";
 import { generateOTP } from "../../utilities/OTP/generateOTP.ts";
@@ -30,8 +24,10 @@ class AuthService {
     const userExist = await checkExistence(userData.email);
 
     if (!userExist) {
-      const hashedPassword = await hashPassword(userData.password);
-      const hashedPin = await hashPassword(userData.pin);
+      const hashedPassword = await bcryptContent.hashPassword(
+        userData.password,
+      );
+      const hashedPin = await bcryptContent.hashPassword(userData.pin);
       const { otp, otpExpire } = generateOTP();
 
       await authRepository.create({
@@ -40,10 +36,10 @@ class AuthService {
         phoneNumber: userData.phoneNumber,
         email: userData.email,
         passwordHash: hashedPassword,
-        isActive: 0,
         isVerified: 0,
-        OTP: otp,
+        otpHash: await bcryptContent.hashPassword(otp),
         otpExpire,
+        otpAttempts: 0,
         pinHash: hashedPin,
       });
 
@@ -62,35 +58,28 @@ class AuthService {
   public async login(loginData: LoginDTO) {
     // check existence
     const userExist = await checkExistence(loginData.email);
+    const invalid = () => new BadRequestException("Invalid email or password");
 
-    if (!userExist) {
-      throw new BadRequestException("user doesn't exist!");
-    }
+    if (!userExist) throw invalid();
 
-    if (!userExist?.isVerified) {
-      throw new BadRequestException("User not verified!");
-    }
-
-    const matchedPassword = await comparePassword(
+    const matchedPassword = await bcryptContent.comparePassword(
       loginData.password,
       userExist.passwordHash,
     );
 
-    if (!matchedPassword) {
-      throw new BadRequestException("Invalid login credentials!");
-    }
+    if (!matchedPassword) throw invalid();
 
-    if (userExist.isActive) {
-      throw new UserAlreadyActiveException("Already logged in!");
+    if (!userExist?.isVerified) {
+      throw new BadRequestException("Please verify your account first!");
     }
 
     const accessToken = generateAccessToken(userExist.userId);
     const refreshToken = generateRefreshToken(userExist.userId);
 
-    const hashedRefresh = await hashRefresh(refreshToken);
+    const hashedRefresh = await bcryptContent.hashRefresh(refreshToken);
 
     await authRepository.update(
-      { isActive: 1, refreshToken: hashedRefresh, isDeleted: 0 },
+      { refreshToken: hashedRefresh, isDeleted: 0 },
       { where: { email: userExist.email } },
     );
 
@@ -106,12 +95,8 @@ class AuthService {
       throw new UserNotFoundException("User not found!");
     }
 
-    if (userExist.isActive == 0) {
-      throw new BadRequestException("User Already logged out!");
-    }
-
     await authRepository.update(
-      { isActive: 0, refreshToken: null },
+      { refreshToken: null },
       { where: { email: userExist.email } },
     );
 
@@ -126,16 +111,32 @@ class AuthService {
       throw new UserNotFoundException("User not found!");
     }
 
-    if (userExist?.otpExpire! < Date.now()) {
+    if (!userExist.otpHash || !userExist.otpExpire) {
+      throw new BadRequestException("No OTP pending, request a new one");
+    }
+
+    if (userExist.otpExpire < new Date()) {
       throw new BadRequestException("OTP expired, resend a new one!");
     }
 
-    if (userExist.OTP !== otp) {
+    if (userExist.otpAttempts >= 5)
+      throw new BadRequestException("Too many attempts, request a new OTP");
+
+    const ok = await bcryptContent.comparePassword(
+      String(otp),
+      userExist.otpHash,
+    );
+
+    if (!ok) {
+      await authRepository.update(
+        { otpAttempts: userExist.otpAttempts + 1 },
+        { where: { email } },
+      );
       throw new BadRequestException("OTP doesn't match!");
     }
 
     await authRepository.update(
-      { isVerified: 1, OTP: null, otpExpire: null },
+      { isVerified: 1, otpHash: null, otpExpire: null, otpAttempts: 0 },
       { where: { email } },
     );
 
@@ -157,7 +158,11 @@ class AuthService {
     const { otp, otpExpire } = generateOTP();
 
     return await authRepository.update(
-      { OTP: otp, otpExpire },
+      {
+        otpHash: await bcryptContent.hashPassword(otp),
+        otpExpire,
+        otpAttempts: 0,
+      },
       { where: { email } },
     );
   }
@@ -173,7 +178,7 @@ class AuthService {
     let payload: TokenPayload;
 
     try {
-      payload = verifyToken(refreshToken);
+      payload = verifyRefreshToken(refreshToken);
     } catch (error) {
       throw new BadRequestException("Invalid or expired refresh token!");
     }
@@ -181,7 +186,7 @@ class AuthService {
     const user = await authRepository.findById(payload.userId);
 
     const matches = user?.refreshToken
-      ? await compareRefresh(refreshToken, user.refreshToken)
+      ? await bcryptContent.compareRefresh(refreshToken, user.refreshToken)
       : false;
 
     if (!user || !user.refreshToken || !matches) {
@@ -198,7 +203,7 @@ class AuthService {
     const newRefreshToken = generateRefreshToken(user.userId);
 
     await authRepository.update(
-      { refreshToken: await hashRefresh(newRefreshToken) },
+      { refreshToken: await bcryptContent.hashRefresh(newRefreshToken) },
       { where: { userId: user.userId } },
     );
 
