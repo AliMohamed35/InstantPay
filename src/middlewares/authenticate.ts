@@ -1,8 +1,15 @@
 import type { NextFunction, Request, Response } from "express";
-import { generateAccessToken, verifyToken } from "../utilities/jwt/jwt.ts";
+import { authRepository } from "../Modules/Auth/authRepository.ts";
+import { compareRefresh } from "../utilities/bcrypt/bcrypt.ts";
+import {
+  generateAccessToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+} from "../utilities/jwt/jwt.ts";
 import logger from "../utilities/logger/winston.ts";
 
-export function auth(req: Request, res: Response, next: NextFunction) {
+// Token Rotation mechanism
+export async function auth(req: Request, res: Response, next: NextFunction) {
   const accessToken =
     req.cookies?.accessToken ??
     (req.headers.authorization?.startsWith("Bearer ")
@@ -12,7 +19,7 @@ export function auth(req: Request, res: Response, next: NextFunction) {
   // happy path, when the accessToken is valid only.
   if (accessToken) {
     try {
-      req.user = verifyToken(accessToken);
+      req.user = verifyAccessToken(accessToken);
       return next();
     } catch (error: any) {
       if (error.name !== "TokenExpiredError") {
@@ -25,27 +32,18 @@ export function auth(req: Request, res: Response, next: NextFunction) {
   }
 
   // if no accessToken or expired or whatever, move on to the refreshToken
+  // need to check isActive, isDeleted and softDeleted
   const refreshToken = req.cookies?.refreshToken;
 
   if (!refreshToken) {
-    return res.status(400).json({
-      message: "Invalid or expired token, Please login again!",
-      success: false,
-    });
+    return res
+      .status(401)
+      .json({ message: "Invalid or expired token, please login again!" });
   }
 
+  let payload;
   try {
-    const verifiedToken = verifyToken(refreshToken);
-    const newAccessToken = generateAccessToken(verifiedToken.userId);
-
-    res.cookie("accessToken", newAccessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-    });
-
-    req.user = verifiedToken;
-    return next();
+    payload = verifyRefreshToken(refreshToken);
   } catch (error: any) {
     logger.warn(`refresh failed: ${error.message}`);
     return res.status(401).json({
@@ -53,4 +51,37 @@ export function auth(req: Request, res: Response, next: NextFunction) {
       message: "Session expired, Please login again!",
     });
   }
+
+  const userExist = await authRepository.findById(payload.userId);
+
+  if (!userExist)
+    return res.status(404).json({ success: false, message: "User Not Found!" });
+
+  if (userExist.isDeleted)
+    return res.status(401).json({
+      success: false,
+      message: "User is deleted login again to retrieve account!",
+    });
+
+  const verifiedToken = userExist.refreshToken
+    ? await compareRefresh(refreshToken, userExist.refreshToken)
+    : false;
+
+  if (!verifiedToken) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid refresh token, please login again!",
+    });
+  }
+
+  const newAccessToken = generateAccessToken(userExist.userId);
+
+  res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  req.user = { userId: userExist.userId, type: "access" };
+  return next();
 }
