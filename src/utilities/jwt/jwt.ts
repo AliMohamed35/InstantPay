@@ -19,24 +19,30 @@ export interface TokenPayload {
 export const generateAccessToken = (userId: string): string => {
   return jwt.sign({ userId, type: "access" }, ACCESS_SECRET, {
     expiresIn: ACCESS_EXPIRY,
+    algorithm: "HS256",
   });
 };
 
 export const generateRefreshToken = (userId: string): string => {
   return jwt.sign({ userId, type: "refresh" }, REFRESH_SECRET, {
     expiresIn: REFRESH_EXPIRY,
+    algorithm: "HS256",
   });
 };
 
 // throws if token is expired
 export const verifyAccessToken = (token: string): TokenPayload => {
-  const payload = jwt.verify(token, ACCESS_SECRET) as TokenPayload;
+  const payload = jwt.verify(token, ACCESS_SECRET, {
+    algorithms: ["HS256"],
+  }) as TokenPayload;
   if (payload.type !== "access") throw new Error("Wrong token type");
   return payload;
 };
 
 export const verifyRefreshToken = (token: string): TokenPayload => {
-  const payload = jwt.verify(token, REFRESH_SECRET) as TokenPayload;
+  const payload = jwt.verify(token, REFRESH_SECRET, {
+    algorithms: ["HS256"],
+  }) as TokenPayload;
   if (payload.type !== "refresh") throw new Error("Wrong token type");
   return payload;
 };

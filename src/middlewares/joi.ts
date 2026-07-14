@@ -13,6 +13,8 @@ export const validate = (
   return (req: Request, res: Response, next: NextFunction) => {
     const { error, value } = schema.validate(req[property], {
       abortEarly: true,
+      allowUnknown: false,
+      stripUnknown: false,
     });
 
     if (error) {

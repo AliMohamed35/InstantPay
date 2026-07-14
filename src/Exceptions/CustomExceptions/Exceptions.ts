@@ -21,8 +21,14 @@ export class UserAlreadyActiveException extends Error {
 
 export class BadRequestException extends Error {
   statusCode = 400;
-  constructor(message = "User Already logged out!") {
+  constructor(message = "Bad Request!") {
     super(message);
   }
 }
 
+export class UnauthorizedException extends Error {
+  statusCode = 401;
+  constructor(message = "Unauthorized!") {
+    super(message);
+  }
+}

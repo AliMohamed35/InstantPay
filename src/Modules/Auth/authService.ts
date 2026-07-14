@@ -1,6 +1,7 @@
 import { UniqueConstraintError } from "sequelize";
 import {
   BadRequestException,
+  UnauthorizedException,
   UserAlreadyExistException,
   UserNotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
@@ -8,6 +9,7 @@ import * as bcryptContent from "../../utilities/bcrypt/bcrypt.ts";
 import {
   generateAccessToken,
   generateRefreshToken,
+  verifyRefreshToken,
 } from "../../utilities/jwt/jwt.ts";
 import { generateOTP } from "../../utilities/OTP/generateOTP.ts";
 import { authRepository } from "./authRepository.ts";
@@ -16,6 +18,7 @@ import type { RegisterDTO, RegisterResponseDTO } from "./dto/RegisterDTO.ts";
 import { checkExistence } from "./providers/checkExistence.ts";
 import { toPublicUser } from "./providers/toPublicUser.ts";
 import { sendOtpEmail } from "../../utilities/mail/mailer.ts";
+import { sha256 } from "../../utilities/hash/sha256.ts";
 
 class AuthService {
   // We need to add send OTP and resend OTP
@@ -76,10 +79,8 @@ class AuthService {
     const accessToken = generateAccessToken(userExist.userId);
     const refreshToken = generateRefreshToken(userExist.userId);
 
-    const hashedRefresh = await bcryptContent.hashRefresh(refreshToken);
-
     await authRepository.update(
-      { refreshToken: hashedRefresh, isDeleted: 0 },
+      { refreshToken: sha256(refreshToken), isDeleted: 0 },
       { where: { email: userExist.email } },
     );
 
@@ -101,6 +102,38 @@ class AuthService {
     );
 
     return { userId: userExist.userId };
+  }
+
+  // refresh
+  public async refresh(rawToken?: string) {
+    if (!rawToken) throw new UnauthorizedException("No refresh Token!");
+
+    let payload;
+    try {
+      payload = verifyRefreshToken(rawToken);
+    } catch (error) {
+      throw new UnauthorizedException("Session expired, please login again");
+    }
+
+    const oldHash = sha256(rawToken);
+    const newRefreshToken = generateRefreshToken(payload.userId);
+    const newHash = sha256(newRefreshToken);
+
+    const [affected] = await authRepository.update(
+      { refreshToken: newHash },
+      {
+        where: { userId: payload.userId, refreshToken: oldHash, isDeleted: 0 },
+      },
+    );
+
+    if (affected === 0) {
+      throw new UnauthorizedException(
+        "Invalid or expired session, please login again",
+      );
+    }
+
+    const accessToken = generateAccessToken(payload.userId);
+    return {userId: payload.userId, accessToken, refreshToken: newRefreshToken};
   }
 
   // verifyOTP
