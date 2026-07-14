@@ -1,14 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 import logger from "../utilities/logger/winston.ts";
-import {
-  BadRequestException,
-  UserAlreadyActiveException,
-  UserAlreadyExistException,
-  UserNotFoundException,
-} from "./CustomExceptions/Exceptions.ts";
+
+interface HttpError extends Error {
+  statusCode?: number;
+}
 
 export const errorHandler = (
-  error: Error,
+  error: HttpError,
   req: Request,
   res: Response,
   next: NextFunction,
@@ -18,35 +16,20 @@ export const errorHandler = (
     return next(error);
   }
 
-  if (error instanceof UserAlreadyExistException) {
-    return res.status(400).json({
-      message: "User Already Exist",
+  const statusCode = error.statusCode ?? 500;
+
+  if (statusCode >= 500) {
+    logger.error(
+      `${req.method} ${req.originalUrl} -> ${statusCode}: ${error.stack ?? error.message}`,
+    );
+  } else {
+    logger.warn(
+      `${req.method} ${req.originalUrl} -> ${statusCode}: ${error.message}`,
+    );
+  }
+    return res.status(statusCode).json({
       success: false,
-      error: error.message,
+      message: statusCode >= 500 ? "Internal server error" : error.message,
     });
   }
 
-  if (error instanceof UserNotFoundException) {
-    return res.status(404).json({
-      message: "User not found!",
-      success: false,
-      error: error.message,
-    });
-  }
-
-  if (error instanceof UserAlreadyActiveException) {
-    return res.status(404).json({
-      message: "Already logged in!",
-      success: false,
-      error: error.message,
-    });
-  }
-  
-  if (error instanceof BadRequestException) {
-    return res.status(404).json({
-      message: "User Already logged out!",
-      success: false,
-      error: error.message,
-    });
-  }
-};

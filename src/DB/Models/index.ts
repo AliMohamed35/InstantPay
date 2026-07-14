@@ -3,12 +3,6 @@ import Account from "./Accounts/Accounts.ts";
 import Transaction from "./Transactions/Transaction.ts";
 import LedgerEntry from "./LedgerEntries/LedgerEntry.ts";
 
-// ---------------------------------------------------------------------------
-// Associations are declared here, in one place, after every model is defined.
-// Doing it inside the model files risks circular imports; centralizing keeps
-// the dependency graph flat and the relationships easy to read at a glance.
-// ---------------------------------------------------------------------------
-
 // A user owns many accounts; every account belongs to exactly one user.
 User.hasMany(Account, {
   foreignKey: "userId",

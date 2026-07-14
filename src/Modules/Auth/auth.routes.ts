@@ -3,35 +3,36 @@ import { authController } from "./authController.ts";
 import * as joiContent from "../../middlewares/joi.ts";
 import { auth } from "../../middlewares/authenticate.ts";
 import { authLimiter, otpLimiter } from "../../middlewares/rateLimit.ts";
+import { asyncHandler } from "../../middlewares/asyncHandler.ts";
 
 const authRouter = Router();
 
 authRouter.post(
   "/register",
   joiContent.validate(joiContent.registerSchema),
-  authController.register,
+  asyncHandler(authController.register),
 );
 authRouter.post(
   "/login",
   authLimiter,
   joiContent.validate(joiContent.loginSchema),
-  authController.login,
+  asyncHandler(authController.login),
 );
 authRouter.post(
   "/verify",
   otpLimiter,
   joiContent.validate(joiContent.verifySchema),
-  authController.verifyOTP,
+  asyncHandler(authController.verifyOTP),
 );
 authRouter.post(
   "/otp",
   otpLimiter,
   joiContent.validate(joiContent.resendOTPSchema),
-  authController.resendOTP,
+  asyncHandler(authController.resendOTP),
 );
-authRouter.post("/refresh", authLimiter, authController.refreshToken);
+authRouter.post("/refresh", asyncHandler(authController.refresh));
 
 // Protected
-authRouter.post("/logout", auth, authController.logout);
+authRouter.post("/logout", auth, asyncHandler(authController.logout));
 
 export default authRouter;

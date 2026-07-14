@@ -1,5 +1,7 @@
+import { UniqueConstraintError } from "sequelize";
 import {
   BadRequestException,
+  UserAlreadyExistException,
   UserNotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
 import {
@@ -34,7 +36,7 @@ class UserService {
     const newPass = await hashPassword(newPassword);
 
     return await authRepository.update(
-      { passwordHash: newPass, isActive: 0 },
+      { passwordHash: newPass, refreshToken: null },
       { where: { email: userExist.email } },
     );
   }
@@ -54,19 +56,9 @@ class UserService {
     }
 
     return await authRepository.update(
-      { isActive: 0, isDeleted: 1 },
+      { isDeleted: 1 },
       { where: { email: userExist.email } },
     );
-  }
-  // Delete user
-  public async deleteUser(userId: any) {
-    const userExist = await authRepository.findById(userId);
-
-    if (!userExist) {
-      throw new UserNotFoundException("user doesn't exist!");
-    }
-
-    return await authRepository.delete({ where: { email: userExist.email } });
   }
 
   // getSpecificUser
@@ -86,12 +78,24 @@ class UserService {
     const userExist = await authRepository.findById(userId);
     if (!userExist) throw new UserNotFoundException("User Not Found!");
 
-    const [affectedCount] = await userRepository.update(userData, {
-      where: { userId },
-    });
+    const payload: Record<string, unknown> = { ...userData };
 
-    if (affectedCount == 0) {
-      throw new BadRequestException("No changes made");
+    if (userData.email && userData.email !== userExist.email) {
+      payload.isVerified = 0;
+    }
+
+    try {
+      const [affectedCount] = await userRepository.update(payload, {
+        where: { userId },
+      });
+      if (affectedCount === 0) {
+        throw new BadRequestException("No changes made");
+      }
+    } catch (error) {
+      if (error instanceof UniqueConstraintError) {
+        throw new UserAlreadyExistException("Email is already in use!");
+      }
+      throw error;
     }
 
     return { message: "user updated successfully" };
@@ -105,7 +109,15 @@ class UserService {
       throw new UserNotFoundException("user not found!");
     }
 
-    const [affectedCount] = await userRepository.update(userField, {
+    const payload: Partial<UpdateUserDTO> & { isVerified?: number } = {
+      ...userField,
+    };
+
+    if (userField.email !== undefined && userField.email !== userExist.email) {
+      payload.isVerified = 0;
+    }
+
+    const [affectedCount] = await userRepository.update(payload, {
       where: { userId },
     });
 

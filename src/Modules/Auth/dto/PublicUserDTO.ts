@@ -5,7 +5,6 @@ export interface PublicUserDTO {
   lastName: string | null;
   phoneNumber: string | null;
   email: string;
-  isActive: number;
   isVerified: number | null;
   isDeleted: number | null;
 }

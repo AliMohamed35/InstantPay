@@ -4,6 +4,7 @@ import userRouter from "./Modules/User/user.routes.ts";
 import sequelize, { connectDB } from "./DB/connection.ts";
 import "./DB/Models/index.ts";
 import cookieParser from "cookie-parser";
+import { errorHandler } from "./Exceptions/ExceptionHandler.ts";
 
 async function bootstrap(app: Application, express: any): Promise<void> {
   app.use(express.json());
@@ -12,7 +13,9 @@ async function bootstrap(app: Application, express: any): Promise<void> {
 
   await connectDB();
 
-  await sequelize.sync();
+  if (process.env.NODE_ENV !== "production") {
+    await sequelize.sync();
+  }
 
   app.get("/health", (req: Request, res: Response, next: NextFunction) => {
     res.status(200).json({ message: "healthy", timestamp: Date.now() });
@@ -21,6 +24,9 @@ async function bootstrap(app: Application, express: any): Promise<void> {
   // routes
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
+
+  // centralized error handling
+  app.use(errorHandler);
 }
 
 export default bootstrap;

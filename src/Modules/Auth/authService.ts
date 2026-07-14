@@ -1,5 +1,7 @@
+import { UniqueConstraintError } from "sequelize";
 import {
   BadRequestException,
+  UnauthorizedException,
   UserAlreadyExistException,
   UserNotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
@@ -8,7 +10,6 @@ import {
   generateAccessToken,
   generateRefreshToken,
   verifyRefreshToken,
-  type TokenPayload,
 } from "../../utilities/jwt/jwt.ts";
 import { generateOTP } from "../../utilities/OTP/generateOTP.ts";
 import { authRepository } from "./authRepository.ts";
@@ -16,20 +17,17 @@ import type { LoginDTO } from "./dto/LoginDTO.ts";
 import type { RegisterDTO, RegisterResponseDTO } from "./dto/RegisterDTO.ts";
 import { checkExistence } from "./providers/checkExistence.ts";
 import { toPublicUser } from "./providers/toPublicUser.ts";
+import { sendOtpEmail } from "../../utilities/mail/mailer.ts";
+import { sha256 } from "../../utilities/hash/sha256.ts";
 
 class AuthService {
   // We need to add send OTP and resend OTP
   public async register(userData: RegisterDTO): Promise<RegisterResponseDTO> {
-    // check user existence
-    const userExist = await checkExistence(userData.email);
+    const hashedPassword = await bcryptContent.hashPassword(userData.password);
+    const hashedPin = await bcryptContent.hashPassword(userData.pin);
+    const { otp, otpExpire } = generateOTP();
 
-    if (!userExist) {
-      const hashedPassword = await bcryptContent.hashPassword(
-        userData.password,
-      );
-      const hashedPin = await bcryptContent.hashPassword(userData.pin);
-      const { otp, otpExpire } = generateOTP();
-
+    try {
       await authRepository.create({
         firstName: userData.firstName,
         lastName: userData.lastName,
@@ -42,16 +40,21 @@ class AuthService {
         otpAttempts: 0,
         pinHash: hashedPin,
       });
-
-      return {
-        firstName: userData.firstName,
-        lastName: userData.lastName,
-        phoneNumber: userData.phoneNumber,
-        email: userData.email,
-      };
-    } else {
-      throw new UserAlreadyExistException("User already exist, please login!");
+    } catch (error) {
+      if (error instanceof UniqueConstraintError) {
+        throw new UserAlreadyExistException(
+          "User already exist, please login!",
+        );
+      }
+      throw error;
     }
+    await sendOtpEmail(userData.email, otp);
+    return {
+      firstName: userData.firstName,
+      lastName: userData.lastName,
+      phoneNumber: userData.phoneNumber,
+      email: userData.email,
+    };
   }
 
   // Login
@@ -76,10 +79,8 @@ class AuthService {
     const accessToken = generateAccessToken(userExist.userId);
     const refreshToken = generateRefreshToken(userExist.userId);
 
-    const hashedRefresh = await bcryptContent.hashRefresh(refreshToken);
-
     await authRepository.update(
-      { refreshToken: hashedRefresh, isDeleted: 0 },
+      { refreshToken: sha256(refreshToken), isDeleted: 0 },
       { where: { email: userExist.email } },
     );
 
@@ -101,6 +102,38 @@ class AuthService {
     );
 
     return { userId: userExist.userId };
+  }
+
+  // refresh
+  public async refresh(rawToken?: string) {
+    if (!rawToken) throw new UnauthorizedException("No refresh Token!");
+
+    let payload;
+    try {
+      payload = verifyRefreshToken(rawToken);
+    } catch (error) {
+      throw new UnauthorizedException("Session expired, please login again");
+    }
+
+    const oldHash = sha256(rawToken);
+    const newRefreshToken = generateRefreshToken(payload.userId);
+    const newHash = sha256(newRefreshToken);
+
+    const [affected] = await authRepository.update(
+      { refreshToken: newHash },
+      {
+        where: { userId: payload.userId, refreshToken: oldHash, isDeleted: 0 },
+      },
+    );
+
+    if (affected === 0) {
+      throw new UnauthorizedException(
+        "Invalid or expired session, please login again",
+      );
+    }
+
+    const accessToken = generateAccessToken(payload.userId);
+    return {userId: payload.userId, accessToken, refreshToken: newRefreshToken};
   }
 
   // verifyOTP
@@ -128,10 +161,7 @@ class AuthService {
     );
 
     if (!ok) {
-      await authRepository.update(
-        { otpAttempts: userExist.otpAttempts + 1 },
-        { where: { email } },
-      );
+      await authRepository.increment("otpAttempts", { where: { email } });
       throw new BadRequestException("OTP doesn't match!");
     }
 
@@ -157,7 +187,7 @@ class AuthService {
 
     const { otp, otpExpire } = generateOTP();
 
-    return await authRepository.update(
+    await authRepository.update(
       {
         otpHash: await bcryptContent.hashPassword(otp),
         otpExpire,
@@ -165,50 +195,14 @@ class AuthService {
       },
       { where: { email } },
     );
+    await sendOtpEmail(email, otp);
+    return { email };
   }
 
   // Reset / forget password
   // check email existence
   // send email or sms to user phoneNumber
   // then update the password in database with the new one
-
-  // refreshToken
-  public async refreshToken(refreshToken: string) {
-    // 1. verify signature
-    let payload: TokenPayload;
-
-    try {
-      payload = verifyRefreshToken(refreshToken);
-    } catch (error) {
-      throw new BadRequestException("Invalid or expired refresh token!");
-    }
-
-    const user = await authRepository.findById(payload.userId);
-
-    const matches = user?.refreshToken
-      ? await bcryptContent.compareRefresh(refreshToken, user.refreshToken)
-      : false;
-
-    if (!user || !user.refreshToken || !matches) {
-      if (user) {
-        await authRepository.update(
-          { refreshToken: null },
-          { where: { userId: user.userId } },
-        );
-      }
-      throw new BadRequestException("Invalid refresh token!");
-    }
-
-    const accessToken = generateAccessToken(user.userId);
-    const newRefreshToken = generateRefreshToken(user.userId);
-
-    await authRepository.update(
-      { refreshToken: await bcryptContent.hashRefresh(newRefreshToken) },
-      { where: { userId: user.userId } },
-    );
-
-    return { accessToken, refreshToken: newRefreshToken };
-  }
 }
 
 export const authService = new AuthService();
