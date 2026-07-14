@@ -38,11 +38,13 @@ class AuthController {
           httpOnly: true,
           sameSite: "strict",
           maxAge: 15 * 60 * 1000,
+          secure: true
         })
         .cookie("refreshToken", refreshToken, {
           httpOnly: true,
           sameSite: "strict",
           maxAge: 7 * 24 * 60 * 60 * 1000,
+          secure: true
         });
 
       return res.status(200).json({
@@ -116,49 +118,6 @@ class AuthController {
         success: false,
         error: error.message,
       });
-    }
-  }
-
-  public async refreshToken(req: Request, res: Response, next: NextFunction) {
-    try {
-      const refreshToken = req.cookies?.refreshToken;
-
-      if (!refreshToken) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Refresh Token required!" });
-      }
-
-      const { accessToken, refreshToken: newRefreshToken } =
-        await authService.refreshToken(refreshToken);
-
-      res
-        .cookie("accessToken", accessToken, {
-          httpOnly: true,
-          sameSite: "strict",
-          maxAge: 15 * 60 * 1000,
-        })
-        .cookie("refreshToken", newRefreshToken, {
-          httpOnly: true,
-          sameSite: "strict",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-      return res.status(200).json({
-        success: true,
-        message: "Token refreshed successfully",
-      });
-    } catch (error: any) {
-      logger.error(
-        `Auth controller refresh error: ${error.stack ?? error.message ?? error}`,
-      );
-      // bad refresh → session is dead: clear cookies, force re-login
-      res
-        .clearCookie("accessToken", { httpOnly: true, sameSite: "strict" })
-        .clearCookie("refreshToken", { httpOnly: true, sameSite: "strict" });
-      return res
-        .status(401)
-        .json({ success: false, message: "Could not refresh session" });
     }
   }
 }

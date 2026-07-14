@@ -3,6 +3,7 @@ import { authRepository } from "../Modules/Auth/authRepository.ts";
 import { compareRefresh } from "../utilities/bcrypt/bcrypt.ts";
 import {
   generateAccessToken,
+  generateRefreshToken,
   verifyAccessToken,
   verifyRefreshToken,
 } from "../utilities/jwt/jwt.ts";
@@ -75,8 +76,20 @@ export async function auth(req: Request, res: Response, next: NextFunction) {
   }
 
   const newAccessToken = generateAccessToken(userExist.userId);
+  const newRefreshToken = generateRefreshToken(userExist.userId);
+
+  await authRepository.update(
+    { refreshToken: newRefreshToken },
+    { where: { userId: userExist.userId } },
+  );
 
   res.cookie("accessToken", newAccessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  });
+
+  res.cookie("refreshToken", newRefreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",

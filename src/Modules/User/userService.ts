@@ -34,7 +34,7 @@ class UserService {
     const newPass = await hashPassword(newPassword);
 
     return await authRepository.update(
-      { passwordHash: newPass, isActive: 0 },
+      { passwordHash: newPass, refreshToken: null },
       { where: { email: userExist.email } },
     );
   }
@@ -46,6 +46,10 @@ class UserService {
     if (!userExist) {
       throw new UserNotFoundException("user doesn't exist!");
     }
+    
+    if (userId !== userExist?.userId) {
+      throw new BadRequestException("You are not allowed to do this action!");
+    }
 
     if (userExist.isDeleted) {
       throw new UserNotFoundException(
@@ -54,19 +58,9 @@ class UserService {
     }
 
     return await authRepository.update(
-      { isActive: 0, isDeleted: 1 },
+      { isDeleted: 1 },
       { where: { email: userExist.email } },
     );
-  }
-  // Delete user
-  public async deleteUser(userId: any) {
-    const userExist = await authRepository.findById(userId);
-
-    if (!userExist) {
-      throw new UserNotFoundException("user doesn't exist!");
-    }
-
-    return await authRepository.delete({ where: { email: userExist.email } });
   }
 
   // getSpecificUser

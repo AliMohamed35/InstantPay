@@ -20,26 +20,6 @@ class UserController {
     }
   }
 
-  public async deleteUser(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = req.user!.userId;
-      await userService.deleteUser(userId);
-      res.clearCookie("accessToken").clearCookie("refreshToken");
-
-      return res
-        .status(201)
-        .json({ message: "user deleted! successfully", success: true });
-    } catch (error: any) {
-      const statusCode = error.statusCode ?? 500;
-      logger.error("this is an delete UserController error: " + `${error}`);
-      res.status(statusCode).json({
-        message: "internal server error",
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
   public async changePassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { oldPassword, newPassword } = req.body;

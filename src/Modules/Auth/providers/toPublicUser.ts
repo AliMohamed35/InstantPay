@@ -10,7 +10,6 @@ export function toPublicUser(user: User): PublicUserDTO {
     lastName: user.lastName,
     phoneNumber: user.phoneNumber,
     email: user.email,
-    isActive: user.isActive,
     isVerified: user.isVerified,
     isDeleted: user.isDeleted,
   };

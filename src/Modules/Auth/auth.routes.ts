@@ -29,7 +29,6 @@ authRouter.post(
   joiContent.validate(joiContent.resendOTPSchema),
   authController.resendOTP,
 );
-authRouter.post("/refresh", authLimiter, authController.refreshToken);
 
 // Protected
 authRouter.post("/logout", auth, authController.logout);

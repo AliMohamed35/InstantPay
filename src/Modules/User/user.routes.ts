@@ -15,28 +15,22 @@ userRouter.post(
   userController.changePassword,
 );
 userRouter.post(
-  "/:userId",
+  "/",
   auth,
-  authorizeSelf("userId"),
   userController.softDeleteUser,
 );
-userRouter.delete(
-  "/:userId",
-  auth,
-  authorizeSelf("userId"),
-  userController.deleteUser,
-);
 
-userRouter.get("/:userId", auth, userController.getSpecificUser);
+userRouter.get("/", auth, userController.getSpecificUser);
+
 userRouter.put(
-  "/:userId",
+  "/",
   auth,
   validate(joiContent.updateUserSchema),
   userController.updateUser,
 );
 
 userRouter.patch(
-  "/:userId",
+  "/",
   auth,
   validate(joiContent.partialUpdateSchema),
   userController.partialUpdateUser,
