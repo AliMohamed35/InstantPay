@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { authService } from "./authService.ts";
 import type { RegisterDTO, RegisterResponseDTO } from "./dto/RegisterDTO.ts";
+import { ApiResponse } from "../../utilities/apiResponse.ts";
 
 const isProd = process.env.NODE_ENV === "production";
 const ACCESS_COOKIE_MS = 15 * 60 * 1000;
@@ -46,11 +47,12 @@ class AuthController {
     const createdUserDTO: RegisterResponseDTO =
       await authService.register(userData);
 
-    return res.status(201).send({
-      success: true,
-      message: "User created successfully",
-      data: createdUserDTO,
-    });
+    return ApiResponse.sendSuccess(
+      res,
+      createdUserDTO,
+      "User created successfully",
+      201,
+    );
   }
 
   public async login(req: Request, res: Response, next: NextFunction) {
@@ -58,11 +60,13 @@ class AuthController {
       req.body,
     );
     setAuthCookies(res, accessToken, refreshToken);
-    return res.status(200).json({
-      success: true,
-      message: "User logged in successfully",
-      data: { userId },
-    });
+
+    return ApiResponse.sendSuccess(
+      res,
+      userId,
+      "User logged in successfully",
+      200,
+    );
   }
 
   public async logout(req: Request, res: Response, next: NextFunction) {
@@ -71,11 +75,12 @@ class AuthController {
 
     clearAuthCookies(res);
 
-    return res.status(200).json({
-      message: "User logged out successfully",
-      success: true,
-      data: loggedOutUser,
-    });
+    return ApiResponse.sendSuccess(
+      res,
+      loggedOutUser,
+      "User logged out successfully",
+      200,
+    );
   }
 
   public async refresh(req: Request, res: Response, next: NextFunction) {
@@ -83,25 +88,36 @@ class AuthController {
       req.cookies?.refreshToken,
     );
     setAuthCookies(res, accessToken, refreshToken);
-    return res.status(200).json({ success: true, message: "Token refreshed" });
+    return ApiResponse.sendSuccess(
+      res,
+      "ok",
+      "Token refreshed successfully",
+      200,
+    );
   }
 
   public async verifyOTP(req: Request, res: Response, next: NextFunction) {
     const { email, otp } = req.body;
     const verifiedUser = await authService.verifyOTP(email, otp);
 
-    return res.status(200).json({
-      message: "User verified out successfully",
-      success: true,
-      data: verifiedUser,
-    });
+    return ApiResponse.sendSuccess(
+      res,
+      verifiedUser,
+      "User Verified successfully",
+      200,
+    );
   }
 
   public async resendOTP(req: Request, res: Response, next: NextFunction) {
     const { email } = req.body;
     await authService.resendOTP(email);
 
-    res.status(201).json({ message: "new OTP sent!", success: true });
+    return ApiResponse.sendSuccess(
+      res,
+      "ok",
+      "New OTP has been sent check your email",
+      200,
+    );
   }
 }
 
