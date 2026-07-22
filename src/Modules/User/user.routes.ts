@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { asyncHandler } from "../../middlewares/asyncHandler.ts";
 import { auth } from "../../middlewares/authenticate.ts";
-import * as joiContent from "../../middlewares/joi.ts";
+import * as userValidate from "../User/validate/userValidate.ts";
 import { validate } from "../../middlewares/joi.ts";
 import { userController } from "./userController.ts";
 
@@ -11,7 +11,7 @@ const userRouter = Router();
 userRouter.post(
   "/reset-password",
   auth,
-  validate(joiContent.resetPasswordSchema),
+  validate(userValidate.resetPasswordSchema),
   asyncHandler(userController.changePassword),
 );
 userRouter.post("/", auth, asyncHandler(userController.softDeleteUser));
@@ -21,14 +21,14 @@ userRouter.get("/", auth, asyncHandler(userController.getSpecificUser));
 userRouter.put(
   "/",
   auth,
-  validate(joiContent.updateUserSchema),
+  validate(userValidate.updateUserSchema),
   asyncHandler(userController.updateUser),
 );
 
 userRouter.patch(
   "/",
   auth,
-  validate(joiContent.partialUpdateSchema),
+  validate(userValidate.partialUpdateSchema),
   asyncHandler(userController.partialUpdateUser),
 );
 
