@@ -25,6 +25,10 @@ class AbstractRepository<M extends Model> {
     return this.model.findOne(options);
   }
 
+  public findAll(options?: FindOptions<Attributes<M>>): Promise<M[]> {
+    return this.model.findAll(options);
+  }
+
   // this returns Promise<[affectedCount: number]> not a model instance
   public update(
     values: Partial<Attributes<M>>,

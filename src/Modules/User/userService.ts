@@ -2,7 +2,7 @@ import { UniqueConstraintError } from "sequelize";
 import {
   BadRequestException,
   UserAlreadyExistException,
-  UserNotFoundException,
+  NotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
 import {
   comparePassword,
@@ -23,7 +23,7 @@ class UserService {
     const userExist = await authRepository.findById(userId);
 
     if (!userExist) {
-      throw new UserNotFoundException("user doesn't exist!");
+      throw new NotFoundException("user doesn't exist!");
     }
 
     // Compare new to old
@@ -46,11 +46,11 @@ class UserService {
     const userExist = await authRepository.findById(userId);
 
     if (!userExist) {
-      throw new UserNotFoundException("user doesn't exist!");
+      throw new NotFoundException("user doesn't exist!");
     }
 
     if (userExist.isDeleted) {
-      throw new UserNotFoundException(
+      throw new NotFoundException(
         "user already soft deleted, log in to retrieve the account!",
       );
     }
@@ -66,7 +66,7 @@ class UserService {
     const userExist = await authRepository.findById(userId);
 
     if (!userExist) {
-      throw new UserNotFoundException("User not found!");
+      throw new NotFoundException("User not found!");
     }
 
     return toPublicUser(userExist);
@@ -76,7 +76,7 @@ class UserService {
   public async fullyUpdateUser(userId: any, userData: UpdateUserDTO) {
     // check user existence
     const userExist = await authRepository.findById(userId);
-    if (!userExist) throw new UserNotFoundException("User Not Found!");
+    if (!userExist) throw new NotFoundException("User Not Found!");
 
     const payload: Record<string, unknown> = { ...userData };
 
@@ -106,7 +106,7 @@ class UserService {
     const userExist = await authRepository.findById(userId);
 
     if (!userExist) {
-      throw new UserNotFoundException("user not found!");
+      throw new NotFoundException("user not found!");
     }
 
     const payload: Partial<UpdateUserDTO> & { isVerified?: number } = {

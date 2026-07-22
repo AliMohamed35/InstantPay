@@ -5,7 +5,7 @@ export class UserAlreadyExistException extends Error {
   }
 }
 
-export class UserNotFoundException extends Error {
+export class NotFoundException extends Error {
   statusCode = 404;
   constructor(message = "Not found!") {
     super(message);
@@ -29,6 +29,13 @@ export class BadRequestException extends Error {
 export class UnauthorizedException extends Error {
   statusCode = 401;
   constructor(message = "Unauthorized!") {
+    super(message);
+  }
+}
+
+export class AccountAlreadyExist extends Error {
+  statusCode = 401;
+  constructor(message = "Account Already Exist!") {
     super(message);
   }
 }

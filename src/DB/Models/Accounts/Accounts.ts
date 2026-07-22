@@ -16,6 +16,7 @@ class Account extends Model<
 
   declare userId: string;
   declare type: AccountType;
+  declare accountNumber: string;
   declare balance: CreationOptional<number>;
   declare currency: CreationOptional<string>;
 
@@ -38,6 +39,12 @@ Account.init(
     type: {
       type: DataTypes.ENUM("BANK_ACCOUNT", "WALLET"),
       allowNull: false,
+    },
+    accountNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      field: "accountNumber",
     },
     balance: {
       type: DataTypes.DECIMAL(19, 4),
@@ -66,7 +73,7 @@ Account.init(
     timestamps: true,
     createdAt: "createdAt",
     updatedAt: false,
-  }
+  },
 );
 
 export default Account;

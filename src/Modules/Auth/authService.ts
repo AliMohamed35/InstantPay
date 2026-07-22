@@ -3,7 +3,7 @@ import {
   BadRequestException,
   UnauthorizedException,
   UserAlreadyExistException,
-  UserNotFoundException,
+  NotFoundException,
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
 import * as bcryptContent from "../../utilities/bcrypt/bcrypt.ts";
 import {
@@ -93,7 +93,7 @@ class AuthService {
     const userExist = await authRepository.findById(userId);
 
     if (!userExist) {
-      throw new UserNotFoundException("User not found!");
+      throw new NotFoundException("User not found!");
     }
 
     await authRepository.update(
@@ -141,7 +141,7 @@ class AuthService {
     const userExist = await checkExistence(email);
 
     if (!userExist) {
-      throw new UserNotFoundException("User not found!");
+      throw new NotFoundException("User not found!");
     }
 
     if (!userExist.otpHash || !userExist.otpExpire) {
@@ -178,7 +178,7 @@ class AuthService {
     const userExist = await checkExistence(email);
 
     if (!userExist) {
-      throw new UserNotFoundException("User not found!");
+      throw new NotFoundException("User not found!");
     }
 
     if (userExist.isVerified) {
