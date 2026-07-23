@@ -15,8 +15,6 @@ export type TransactionType =
 
 export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED";
 
-// The HEADER: one row per logical operation. No amount lives here —
-// the signed amounts are the ledger lines (see LedgerEntry).
 class Transaction extends Model<
   InferAttributes<Transaction>,
   InferCreationAttributes<Transaction>
@@ -24,6 +22,7 @@ class Transaction extends Model<
   declare transactionId: CreationOptional<string>;
 
   declare referenceNumber: string;
+  declare initiatedByAccountId: string;
   declare type: TransactionType;
   declare status: CreationOptional<TransactionStatus>;
 
@@ -43,6 +42,11 @@ Transaction.init(
       allowNull: false,
       unique: true,
       field: "reference_number",
+    },
+    initiatedByAccountId:{
+      type: DataTypes.UUID,
+      allowNull: false,
+      field: "initiated_by_account_id"
     },
     type: {
       type: DataTypes.ENUM(

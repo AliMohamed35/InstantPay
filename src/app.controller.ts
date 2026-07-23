@@ -6,6 +6,7 @@ import "./DB/Models/index.ts";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "./Exceptions/ExceptionHandler.ts";
 import accountRouter from "./Modules/Accounts/account.routes.ts";
+// import transactionRouter from "./Modules/Transactions/transactions.routes.ts";
 
 async function bootstrap(app: Application, express: any): Promise<void> {
   app.use(express.json());
@@ -26,6 +27,7 @@ async function bootstrap(app: Application, express: any): Promise<void> {
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
   app.use("/account", accountRouter);
+  // app.use("/transaction", transactionRouter);
 
   // centralized error handling
   app.use(errorHandler);

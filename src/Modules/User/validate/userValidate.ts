@@ -1,5 +1,6 @@
 import Joi from "joi";
 import type { ResetPassword } from "../dto/ResetPasswordDTO.ts";
+import type { TransferDTO } from "../dto/transferDTO.ts";
 import type { UpdateUserDTO } from "../dto/updateDTO.ts";
 
 const password = Joi.string()
@@ -50,4 +51,28 @@ export const partialUpdateSchema = updateUserSchema
 export const resetPasswordSchema = Joi.object<ResetPassword>({
   oldPassword: password,
   newPassword: password,
+});
+
+export const transferSchema = Joi.object<TransferDTO>({
+  senderAccountId: Joi.string().uuid().required(),
+  receiverAccountId: Joi.string()
+    .uuid()
+    .required()
+    .invalid(Joi.ref("senderAccountId"))
+    .messages({ "any invalid": "Cannot transfer to the same account" }),
+  amount: Joi.number()
+    .positive()
+    .precision(4)
+    .required()
+    .messages({ "number.positive": "Amount must be positive" }),
+
+  pin: Joi.string()
+    .pattern(/^[0-9]{3,5}$/)
+    .required(),
+});
+
+export const pinSchema = Joi.object<TransferDTO>({
+  pin: Joi.string()
+    .pattern(/^[0-9]{3,5}$/)
+    .required(),
 });

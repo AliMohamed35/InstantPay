@@ -1,6 +1,6 @@
-import type { NextFunction, Request, Response } from "express";
-import logger from "../../utilities/logger/winston.ts";
-import { userService } from "./userService.ts";
+import type { Request, Response } from "express";
+import { userService } from "./user.service.ts";
+import { ApiResponse } from "../../utilities/apiResponse.ts";
 
 class UserController {
   public async softDeleteUser(req: Request, res: Response) {
@@ -47,6 +47,45 @@ class UserController {
     return res
       .status(200)
       .json({ message: "user updated successfully", success: true });
+  }
+
+  public async checkBalance(req: Request, res: Response) {
+    const requestedUser = req.user?.userId;
+    const accountId = req.params.id;
+    const { pin } = req.body;
+    const balance = await userService.checkBalance(
+      requestedUser,
+      accountId,
+      pin,
+    );
+    return ApiResponse.sendSuccess(res, balance, "OK", 200);
+  }
+
+  public async recharge(req: Request, res: Response) {
+    const requestedUser = req.user?.userId;
+    const accountId = req.params.id;
+    const { amount } = req.body;
+    const addedAmount = await userService.recharge(
+      requestedUser,
+      accountId,
+      amount,
+    );
+    return ApiResponse.sendSuccess(res, addedAmount, "OK", 200);
+  }
+
+  public async transferToUser(req: Request, res: Response) {
+    const userId = req.user!.userId;
+    const { senderAccountId, receiverAccountId, amount, pin } = req.body;
+
+    const result = await userService.transferToUser(
+      userId,
+      senderAccountId,
+      receiverAccountId,
+      amount,
+      pin,
+    );
+
+    return ApiResponse.sendSuccess(res, result, "OK", 200);
   }
 }
 
