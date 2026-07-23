@@ -27,6 +27,18 @@ LedgerEntry.belongsTo(Transaction, {
   as: "transaction",
 });
 
+Transaction.belongsTo(Account, {
+  foreignKey: "initiatedByAccountId",
+  targetKey: "accountId",
+  as: "initiatedByAccount",
+});
+
+Account.hasMany(Transaction, {
+  foreignKey: "initiatedByAccountId",
+  sourceKey: "accountId",
+  as: "initiatedTransactions",
+});
+
 // Each ledger line moves money on exactly one account; an account accumulates
 // many lines (its full history — the source of truth behind the cached balance).
 Account.hasMany(LedgerEntry, {
@@ -39,5 +51,6 @@ LedgerEntry.belongsTo(Account, {
   targetKey: "accountId",
   as: "account",
 });
+
 
 export { User, Account, Transaction, LedgerEntry };

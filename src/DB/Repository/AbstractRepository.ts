@@ -1,5 +1,6 @@
 import type {
   Attributes,
+  CreateOptions,
   CreationAttributes,
   DestroyOptions,
   FindOptions,
@@ -17,8 +18,8 @@ class AbstractRepository<M extends Model> {
     this.model = model;
   }
 
-  public create(data: CreationAttributes<M>): Promise<M> {
-    return this.model.create(data);
+  public create(data: CreationAttributes<M>, options?: CreateOptions<Attributes<M>>): Promise<M> {
+    return this.model.create(data, options);
   }
 
   public findOne(options?: FindOptions<Attributes<M>>): Promise<M | null> {
@@ -43,8 +44,8 @@ class AbstractRepository<M extends Model> {
   }
 
   // findUserById
-  public findById(id: Identifier): Promise<M | null> {
-    return this.model.findByPk(id);
+  public findById(id: Identifier, options?: FindOptions<Attributes<M>>): Promise<M | null> {
+    return this.model.findByPk(id, options);
   }
 
   // increment attempts

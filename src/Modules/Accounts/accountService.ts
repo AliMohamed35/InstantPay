@@ -5,7 +5,7 @@ import {
   UnauthorizedException,
   UserAlreadyExistException
 } from "../../Exceptions/CustomExceptions/Exceptions.ts";
-import { userRepository } from "../User/userRepository.ts";
+import { userRepository } from "../User/user.repository.ts";
 import { accountRepository } from "./accountRepository.ts";
 import type { accountCreatedDTO, addAccountDTO } from "./dto/addAccountDTO.ts";
 import { checkAccountExistence } from "./providers/checkAccountExistence.ts";

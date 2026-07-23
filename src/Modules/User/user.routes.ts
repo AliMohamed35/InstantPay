@@ -3,7 +3,7 @@ import { asyncHandler } from "../../middlewares/asyncHandler.ts";
 import { auth } from "../../middlewares/authenticate.ts";
 import * as userValidate from "../User/validate/userValidate.ts";
 import { validate } from "../../middlewares/joi.ts";
-import { userController } from "./userController.ts";
+import { userController } from "./user.controller.ts";
 
 const userRouter = Router();
 
@@ -31,5 +31,21 @@ userRouter.patch(
   validate(userValidate.partialUpdateSchema),
   asyncHandler(userController.partialUpdateUser),
 );
+
+userRouter.post(
+  "/transfer",
+  auth,
+  validate(userValidate.transferSchema),
+  asyncHandler(userController.transferToUser),
+);
+
+userRouter.post(
+  "/:id",
+  auth,
+  validate(userValidate.pinSchema),
+  asyncHandler(userController.checkBalance),
+);
+
+userRouter.post("/recharge/:id", auth, asyncHandler(userController.recharge));
 
 export default userRouter;
