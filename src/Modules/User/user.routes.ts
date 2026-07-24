@@ -35,8 +35,22 @@ userRouter.patch(
 userRouter.post(
   "/transfer",
   auth,
-  validate(userValidate.transferSchema),
+  validate(userValidate.transferAccountIdSchema),
   asyncHandler(userController.transferToUser),
+);
+
+userRouter.post(
+  "/account-number",
+  auth,
+  validate(userValidate.transferAccountNumberSchema),
+  asyncHandler(userController.transferByAccountNumber),
+);
+
+userRouter.post(
+  "/self-accounts",
+  auth,
+  validate(userValidate.transferAccountIdSchema),
+  asyncHandler(userController.transferBAccounts),
 );
 
 userRouter.post(
@@ -46,6 +60,7 @@ userRouter.post(
   asyncHandler(userController.checkBalance),
 );
 
+// just created this to add fake balance to test the money movement functions
 userRouter.post("/recharge/:id", auth, asyncHandler(userController.recharge));
 
 export default userRouter;

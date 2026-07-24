@@ -27,7 +27,6 @@ async function bootstrap(app: Application, express: any): Promise<void> {
   app.use("/auth", authRouter);
   app.use("/user", userRouter);
   app.use("/account", accountRouter);
-  // app.use("/transaction", transactionRouter);
 
   // centralized error handling
   app.use(errorHandler);

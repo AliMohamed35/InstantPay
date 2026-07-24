@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
-import { userService } from "./user.service.ts";
 import { ApiResponse } from "../../utilities/apiResponse.ts";
+import type { TransferAccountNumberDTO } from "./dto/transferDTO.ts";
+import { userService } from "./user.service.ts";
 
 class UserController {
   public async softDeleteUser(req: Request, res: Response) {
@@ -81,6 +82,41 @@ class UserController {
       userId,
       senderAccountId,
       receiverAccountId,
+      amount,
+      pin,
+    );
+
+    return ApiResponse.sendSuccess(res, result, "OK", 200);
+  }
+
+  public async transferBAccounts(req: Request, res: Response) {
+    const userId = req.user!.userId;
+    const { senderAccountId, receiverAccountId, amount, pin } = req.body;
+
+    const result = await userService.transferByAccountNumber(
+      userId,
+      senderAccountId,
+      receiverAccountId,
+      amount,
+      pin,
+    );
+
+    return ApiResponse.sendSuccess(res, result, "OK", 200);
+  }
+
+  public async transferByAccountNumber(req: Request, res: Response) {
+    const userId = req.user!.userId;
+    const {
+      senderAccountNumber,
+      receiverAccountNumber,
+      amount,
+      pin,
+    }: TransferAccountNumberDTO = req.body;
+
+    const result = await userService.transferByAccountNumber(
+      userId,
+      senderAccountNumber,
+      receiverAccountNumber,
       amount,
       pin,
     );

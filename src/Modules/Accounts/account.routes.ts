@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auth } from "../../middlewares/authenticate.ts";
-import { accountController } from "./accountController.ts";
+import { accountController } from "./account.controller.ts";
 import { asyncHandler } from "../../middlewares/asyncHandler.ts";
 import { validate } from "../../middlewares/joi.ts";
 import { createAccountSchema } from "./validate/accountValidate.ts";
@@ -18,7 +18,6 @@ accountRouter.get(
   auth,
   asyncHandler(accountController.getAccountByNumber),
 );
-
 
 // Protected
 accountRouter.post(
