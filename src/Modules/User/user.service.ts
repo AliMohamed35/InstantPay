@@ -19,6 +19,9 @@ import { ledgerRepository } from "../Ledger/ledgerRepository.ts";
 import { transactionRepository } from "../Transactions/transactions.repository.ts";
 import type { PartialUpdateDTO, UpdateUserDTO } from "./dto/updateDTO.ts";
 import { userRepository } from "./user.repository.ts";
+import { checkExistence } from "../Auth/providers/checkExistence.ts";
+import { generateOTP } from "../../utilities/OTP/generateOTP.ts";
+import { sendOtpEmail } from "../../utilities/mail/mailer.ts";
 
 class UserService {
   // Change password
@@ -46,6 +49,70 @@ class UserService {
       { passwordHash: newPass, refreshToken: null },
       { where: { email: userExist.email } },
     );
+  }
+
+  // forget password
+  public async forgetPassword(email: string) {
+    const userExist = await checkExistence(email);
+
+    if (!userExist) throw new NotFoundException("User not found!");
+
+    const { otp, otpExpire } = generateOTP();
+
+    await authRepository.update(
+      {
+        otpHash: await hashPassword(otp),
+        otpExpire,
+        otpAttempts: 0,
+      },
+      { where: { email } },
+    );
+
+    await sendOtpEmail(email, otp);
+
+    return { email };
+  }
+
+  // reset password
+  public async resetPassword(email: string, otp: string, newPassword: string) {
+    const user = await checkExistence(email);
+
+    if (!user) {
+      throw new NotFoundException("user doesn't exist!");
+    }
+
+    if (!user.otpHash || !user.otpExpire)
+      throw new BadRequestException(
+        "There is not reset pending, request a new code!",
+      );
+
+    if (user.otpExpire < new Date()) {
+      throw new BadRequestException(
+        "There is not reset pending, request a new code!",
+      );
+    }
+
+    if (user.otpAttempts >= 5) {
+      throw new BadRequestException("Too many attempts, request a new code!");
+    }
+
+    const ok = await comparePassword(newPassword, user.passwordHash);
+    if (!ok) {
+      await authRepository.increment("otpAttempts", { where: { email } });
+      throw new BadRequestException("Code doesn't match");
+    }
+
+    await authRepository.update(
+      {
+        passwordHash: await hashPassword(newPassword),
+        otpHash: null,
+        otpExpire: null,
+        otpAttempts: 0,
+        refreshToken: null,
+      },
+      { where: { email } },
+    );
+    return { email };
   }
 
   // Soft delete user

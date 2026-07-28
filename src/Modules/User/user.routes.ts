@@ -4,15 +4,31 @@ import { auth } from "../../middlewares/authenticate.ts";
 import * as userValidate from "../User/validate/userValidate.ts";
 import { validate } from "../../middlewares/joi.ts";
 import { userController } from "./user.controller.ts";
+import { otpLimiter } from "../../middlewares/rateLimit.ts";
 
 const userRouter = Router();
 
 // Protected
 userRouter.post(
-  "/reset-password",
+  "/change-password",
   auth,
-  validate(userValidate.resetPasswordSchema),
+  validate(userValidate.changePasswordSchema),
   asyncHandler(userController.changePassword),
+);
+
+// Forget password
+userRouter.post(
+  "/forgot-password",
+  otpLimiter,
+  validate(userValidate.forgotPasswordSchema),
+  asyncHandler(userController.forgetPassword),
+);
+
+userRouter.post(
+  "/reset-password",
+  otpLimiter,
+  validate(userValidate.resetPasswordSchema),
+  asyncHandler(userController.resetPassword),
 );
 userRouter.post("/", auth, asyncHandler(userController.softDeleteUser));
 
