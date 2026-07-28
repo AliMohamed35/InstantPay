@@ -21,6 +21,28 @@ class UserController {
     });
   }
 
+  public async forgetPassword(req: Request, res: Response) {
+    const { email } = req.body;
+    await userService.forgetPassword(email);
+
+    return res.status(200).json({
+      message: "user password reset successfully",
+      success: true,
+      data: { success: true },
+    });
+  }
+
+  public async resetPassword(req: Request, res: Response) {
+    const { email, otp, newPassword } = req.body;
+    await userService.resetPassword(email, otp, newPassword);
+
+    return res.status(200).json({
+      message: "user password reset successfully",
+      success: true,
+      data: { success: true },
+    });
+  }
+
   public async getSpecificUser(req: Request, res: Response) {
     const userId = req.user?.userId;
     const specificUser = await userService.getSpecificUser(userId);

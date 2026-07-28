@@ -48,9 +48,39 @@ export const partialUpdateSchema = updateUserSchema
   )
   .min(1);
 
-export const resetPasswordSchema = Joi.object<ResetPassword>({
+export const changePasswordSchema = Joi.object<ResetPassword>({
   oldPassword: password,
   newPassword: password,
+});
+
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email({ minDomainSegments: 2 })
+    .max(254)
+    .lowercase()
+    .required(),
+});
+
+export const resetPasswordSchema = Joi.object({
+  email: Joi.string()
+    .email({ minDomainSegments: 2 })
+    .max(254)
+    .lowercase()
+    .required(),
+  otp: Joi.string()
+    .pattern(/^[0-9]{6}$/)
+    .required(),
+  newPassword: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/[a-z]/)
+    .pattern(/[A-Z]/)
+    .pattern(/\d/)
+    .pattern(/[^A-Za-z0-9]/)
+    .messages({
+      "string.pattern.base": "Password needs upper, lower, number, and symbol",
+    })
+    .required(),
 });
 
 export const transferSchema = Joi.object<TransferDTO>({
