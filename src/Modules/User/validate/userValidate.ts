@@ -1,7 +1,11 @@
 import Joi from "joi";
 import type { ResetPassword } from "../dto/ResetPasswordDTO.ts";
-import type { TransferDTO } from "../dto/transferDTO.ts";
+import type {
+  TransferAccountNumberDTO,
+  TransferDTO,
+} from "../dto/transferDTO.ts";
 import type { UpdateUserDTO } from "../dto/updateDTO.ts";
+import { accountNumber } from "../../Accounts/validate/accountValidate.ts";
 
 const password = Joi.string()
   .min(8)
@@ -100,6 +104,22 @@ export const transferSchema = Joi.object<TransferDTO>({
     .pattern(/^[0-9]{3,5}$/)
     .required(),
 });
+
+export const transferAccountNumberSchema = Joi.object<TransferAccountNumberDTO>(
+  {
+    senderAccountNumber: accountNumber,
+    receiverAccountNumber: accountNumber,
+    amount: Joi.number()
+      .positive()
+      .precision(4)
+      .required()
+      .messages({ "number.positive": "Amount must be positive" }),
+
+    pin: Joi.string()
+      .pattern(/^[0-9]{3,5}$/)
+      .required(),
+  },
+);
 
 export const pinSchema = Joi.object<TransferDTO>({
   pin: Joi.string()

@@ -88,7 +88,7 @@ src/
 
 ---
 
-## 🧠 Advanced concepts (the interesting part)
+## Advanced concepts that I learned (the interesting part)
 
 These are the parts that go beyond a typical CRUD project. Each one is here because moving money
 correctly is *hard*, and doing it naively (`UPDATE balance = balance + x`) breaks in ways that lose
@@ -204,7 +204,7 @@ npm test        # run the test suite (Vitest)
 
 The server exposes a health check at `GET /health`.
 
-> ⚠️ **Note:** in non-production the schema is auto-created with `sequelize.sync()`. For real
+> **Note:** in non-production the schema is auto-created with `sequelize.sync()`. For real
 > deployments this should be replaced with proper migrations (see [Roadmap](#roadmap)).
 
 ---

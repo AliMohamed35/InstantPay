@@ -12,7 +12,7 @@ import {
   hashPassword,
 } from "../../utilities/bcrypt/bcrypt.ts";
 import { generateReferenceNumber } from "../../utilities/referenceNumber.ts";
-import { accountRepository } from "../Accounts/accountRepository.ts";
+import { accountRepository } from "../Accounts/account.repository.ts";
 import { authRepository } from "../Auth/authRepository.ts";
 import { toPublicUser } from "../Auth/providers/toPublicUser.ts";
 import { ledgerRepository } from "../Ledger/ledgerRepository.ts";
@@ -237,7 +237,7 @@ class UserService {
       throw new BadRequestException("Amount can't be negative or zero");
 
     return await accountRepository.update(
-      { balance: amount },
+      { balance: (accountExist.balance += amount) },
       { where: { accountId } },
     );
   }
@@ -324,7 +324,7 @@ class UserService {
         transaction: t,
       });
 
-      await accountRepository.increment("balance", {
+      await accountRepository.decrement("balance", {
         by: -amount,
         where: { accountId: senderAccountId },
         transaction: t,
@@ -343,7 +343,208 @@ class UserService {
     });
   }
 
-  // transfer from account to another one
+  // transfer money between accounts
+  public async transferBAccounts(
+    userId: any,
+    senderAccountId: any,
+    receiverAccountId: any,
+    amount: number,
+    pin: string,
+  ) {
+    // check pin matching
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundException("User Not Found!");
+
+    const matchedPin = await comparePin(pin, user.pinHash);
+    if (!matchedPin) throw new BadRequestException("Invalid PIN!");
+
+    if (senderAccountId === receiverAccountId)
+      throw new BadRequestException("Cannot transfer to the same account!");
+
+    // start transaction
+    return await sequelize.transaction(async (t) => {
+      const sender = await accountRepository.findById(senderAccountId, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      const receiver = await accountRepository.findById(receiverAccountId, {
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!sender) throw new NotFoundException("Account Not Found!");
+
+      if (!receiver) throw new NotFoundException("Account Not Found!");
+
+      if (sender.balance < amount)
+        throw new BadRequestException("Insufficient balance!");
+
+      if (sender.userId !== userId)
+        throw new UnauthorizedException("Not your account!");
+
+      if (receiver.userId !== userId)
+        throw new UnauthorizedException("Not your account!");
+
+      if (sender.currency !== receiver.currency)
+        throw new BadRequestException("Currency mismatch!");
+
+      const transaction = await transactionRepository.create(
+        {
+          referenceNumber: generateReferenceNumber(),
+          initiatedByAccountId: senderAccountId,
+          type: "SELF_TRANSFER",
+          status: "PENDING",
+        },
+        { transaction: t },
+      );
+
+      const senderLedger = await ledgerRepository.create(
+        {
+          accountId: senderAccountId,
+          amount: -amount,
+          transactionId: transaction.transactionId,
+        },
+        { transaction: t },
+      );
+
+      const receiverLedger = await ledgerRepository.create(
+        {
+          accountId: receiverAccountId,
+          amount: +amount,
+          transactionId: transaction.transactionId,
+        },
+        { transaction: t },
+      );
+
+      // we need to update the balance
+      await accountRepository.decrement("balance", {
+        by: amount,
+        where: { accountId: senderAccountId },
+        transaction: t,
+      });
+
+      await accountRepository.increment("balance", {
+        by: amount,
+        where: { accountId: receiverAccountId },
+        transaction: t,
+      });
+
+      await transactionRepository.update(
+        { status: "COMPLETED" },
+        { where: { transactionId: transaction.transactionId }, transaction: t },
+      );
+
+      return {
+        referenceNumber: transaction.referenceNumber,
+        amount: amount,
+        status: "COMPLETED",
+      };
+    });
+  }
+
+  // transfer by accountNumber
+  public async transferByAccountNumber(
+    userId: any,
+    senderAccountNumber: string,
+    receiverAccountNumber: string,
+    amount: number,
+    pin: string,
+  ) {
+    // check pin matching
+    const user = await userRepository.findById(userId);
+    if (!user) throw new NotFoundException("User Not Found!");
+
+    const matchedPin = await comparePin(pin, user.pinHash);
+    if (!matchedPin) throw new BadRequestException("Invalid PIN!");
+
+    // start transaction
+    return await sequelize.transaction(async (t) => {
+      const senderNumber = await accountRepository.findByAccountNumber(
+        senderAccountNumber,
+        {
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        },
+      );
+
+      const receiverNumber = await accountRepository.findByAccountNumber(
+        receiverAccountNumber,
+        {
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        },
+      );
+
+      if (!senderNumber)
+        throw new NotFoundException("Sender Account number Not Found!");
+
+      if (!receiverNumber)
+        throw new NotFoundException("Receiver Account number Not Found!");
+
+      if (senderNumber.balance < amount)
+        throw new BadRequestException("Insufficient balance!");
+
+      if (senderNumber.userId !== userId)
+        throw new UnauthorizedException("Not your account!");
+
+      if (senderNumber.currency !== receiverNumber.currency)
+        throw new BadRequestException("Currency mismatch!");
+
+      const transaction = await transactionRepository.create(
+        {
+          referenceNumber: generateReferenceNumber(),
+          initiatedByAccountId: senderNumber.accountId,
+          type: "TRANSFER",
+          status: "PENDING",
+        },
+        { transaction: t },
+      );
+
+      const senderLedger = await ledgerRepository.create(
+        {
+          accountId: senderNumber.accountId,
+          amount: -amount,
+          transactionId: transaction.transactionId,
+        },
+        { transaction: t },
+      );
+
+      const receiverLedger = await ledgerRepository.create(
+        {
+          accountId: receiverNumber.accountId,
+          amount: +amount,
+          transactionId: transaction.transactionId,
+        },
+        { transaction: t },
+      );
+
+      //   // we need to update the balance
+      await accountRepository.increment("balance", {
+        by: amount,
+        where: { accountId: senderNumber.accountId },
+        transaction: t,
+      });
+
+      await accountRepository.decrement("balance", {
+        by: -amount,
+        where: { accountId: receiverNumber.accountId },
+        transaction: t,
+      });
+
+      await transactionRepository.update(
+        { status: "COMPLETED" },
+        { where: { transactionId: transaction.transactionId }, transaction: t },
+      );
+
+      return {
+        referenceNumber: transaction.referenceNumber,
+        amount: amount,
+        status: "COMPLETED",
+      };
+    });
+  }
+  // transfer by email
+  // transfer by phone number
 }
 
 export const userService = new UserService();

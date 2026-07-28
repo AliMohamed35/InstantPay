@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { addAccountDTO } from "./dto/addAccountDTO.ts";
-import { accountService } from "./accountService.ts";
+import { accountService } from "./account.service.ts";
 import { ApiResponse } from "../../utilities/apiResponse.ts";
 import { BadRequestException } from "../../Exceptions/CustomExceptions/Exceptions.ts";
 
@@ -31,7 +31,7 @@ class AccountController {
   }
 
   public async removeAccount(req: Request, res: Response, next: NextFunction) {
-    const RequesterId = req.user?.userId
+    const RequesterId = req.user?.userId;
     const accountId = req.params.id as unknown as string;
     await accountService.removeAccount(accountId, RequesterId);
 

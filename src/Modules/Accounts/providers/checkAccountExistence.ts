@@ -1,5 +1,5 @@
 import logger from "../../../utilities/logger/winston.ts";
-import { accountRepository } from "../accountRepository.ts";
+import { accountRepository } from "../account.repository.ts";
 
 export const checkAccountExistence = async (accountId: any) => {
   try {

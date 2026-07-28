@@ -18,7 +18,10 @@ class AbstractRepository<M extends Model> {
     this.model = model;
   }
 
-  public create(data: CreationAttributes<M>, options?: CreateOptions<Attributes<M>>): Promise<M> {
+  public create(
+    data: CreationAttributes<M>,
+    options?: CreateOptions<Attributes<M>>,
+  ): Promise<M> {
     return this.model.create(data, options);
   }
 
@@ -44,7 +47,10 @@ class AbstractRepository<M extends Model> {
   }
 
   // findUserById
-  public findById(id: Identifier, options?: FindOptions<Attributes<M>>): Promise<M | null> {
+  public findById(
+    id: Identifier,
+    options?: FindOptions<Attributes<M>>,
+  ): Promise<M | null> {
     return this.model.findByPk(id, options);
   }
 
@@ -54,6 +60,13 @@ class AbstractRepository<M extends Model> {
     options: IncrementDecrementOptionsWithBy<Attributes<M>>,
   ): Promise<[affectedRows: M[], affectedCount?: number]> {
     return this.model.increment(fieldName, options);
+  }
+
+  public decrement(
+    fieldName: keyof Attributes<M>,
+    options: IncrementDecrementOptionsWithBy<Attributes<M>>,
+  ): Promise<[affectedRows: M[], affectedCount?: number]> {
+    return this.model.decrement(fieldName, options);
   }
 }
 
